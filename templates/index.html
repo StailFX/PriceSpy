@@ -1,0 +1,124 @@
+<!-- price_spy-main/templates/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>PriceSpy — Список товаров</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 6px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+      font-weight: normal;
+      color: #555;
+    }
+    tr:hover {
+      background: #fafafa;
+    }
+    a.button,
+    button {
+      display: inline-block;
+      padding: 8px 14px;
+      margin: 2px;
+      border: none;
+      background-color: #007bff;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    a.button:hover,
+    button:hover {
+      background-color: #0056b3;
+    }
+    button.delete {
+      background-color: #dc3545;
+    }
+    button.delete:hover {
+      background-color: #a71d2a;
+    }
+    button.fetch {
+      background-color: #28a745;
+    }
+    button.fetch:hover {
+      background-color: #1c7c31;
+    }
+    .actions form {
+      display: inline;
+    }
+    .top-actions {
+      margin-bottom: 20px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>PriceSpy — Список товаров</h1>
+
+    <div class="top-actions">
+      <a href="/new" class="button">Добавить товар</a>
+      <form action="/ozon/products/fetch_all" method="post" style="display:inline;">
+        <button type="submit" class="fetch">Обновить цены всем</button>
+      </form>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Название</th>
+          <th>SKU</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td>{{ p.name }}</td>
+          <td>{{ p.sku or "" }}</td>
+          <td class="actions">
+            <form action="/delete/{{ p.id }}" method="post">
+              <button type="submit" class="delete">Удалить</button>
+            </form>
+            <form action="/ozon/products/{{ p.id }}/fetch" method="post">
+              <button type="submit" class="fetch">Обновить</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

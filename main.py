@@ -1,8 +1,9 @@
-# main.py
+# price_spy-main/main.py
 
 import os
-from fastapi import FastAPI, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from databases import Database
 from sqlalchemy import (
     create_engine,
@@ -20,50 +21,39 @@ from contextlib import asynccontextmanager
 # 1. Настройка базы данных
 # ----------------------------
 
-# Используем файл SQLite рядом с этим скриптом
-DATABASE_URL = "sqlite:///./test.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 database = Database(DATABASE_URL)
 
-# Создаём SQLAlchemy-движок и метаданные
 engine = create_engine(
     DATABASE_URL,
-    # важно для SQLite + многопоточности
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False},  # для SQLite
 )
 metadata = MetaData()
 
-# Описание таблицы "products"
 products = Table(
     "products",
     metadata,
-    Column("id", Integer, primary_key=True),
+    Column("id",   Integer, primary_key=True),
     Column("name", String(length=255), nullable=False),
-    Column("sku", String(length=50), unique=True, nullable=False),
+    Column("sku",  String(length=50), unique=True, nullable=True),
 )
 
-# Если базы нет — создадим файлик test.db и таблицу products
+# пересоздаём схему при старте (для локальной разработки)
+metadata.drop_all(engine)
 metadata.create_all(engine)
 
-
 # ----------------------------
-# 2. Pydantic-схемы (v2)
+# 2. Pydantic-схемы
 # ----------------------------
 
 class ProductCreate(BaseModel):
-    name: str
-    sku: str
+    name: str  # только имя товара
 
+class Product(ProductCreate):
+    id:  int
+    sku: str | None = None
 
-class Product(BaseModel):
-    id: int
-    name: str
-    sku: str
-
-    model_config = {
-        # В Pydantic v2 вместо orm_mode=True используется from_attributes=True
-        "from_attributes": True
-    }
-
+    model_config = {"from_attributes": True}
 
 # ----------------------------
 # 3. FastAPI + Lifespan
@@ -71,106 +61,94 @@ class Product(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # При старте приложения подключаемся к базе
     await database.connect()
-    try:
-        yield
-    finally:
-        # При завершении — отключаемся
-        await database.disconnect()
+    yield
+    await database.disconnect()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="PriceSpy",
+    description="Сервис мониторинга цен с Ozon",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
+templates = Jinja2Templates(directory="templates")
 
 # ----------------------------
 # 4. Эндпоинты
 # ----------------------------
 
-@app.get("/", response_class=HTMLResponse)
-async def show_form():
+@app.get("/", response_class=HTMLResponse, tags=["products"])
+async def list_products(request: Request):
     """
-    Возвращает простую HTML-страницу с формой для ввода 'name' и 'sku'.
+    Список товаров с кнопками: добавить, удалить и обновить цены.
     """
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <title>Добавить товар</title>
-    </head>
-    <body>
-        <h1>Добавить новый товар</h1>
-        <form action="/" method="post">
-            <label for="name">Название товара:</label><br>
-            <input type="text" id="name" name="name" required><br><br>
-
-            <label for="sku">SKU:</label><br>
-            <input type="text" id="sku" name="sku" required><br><br>
-
-            <button type="submit">Сохранить</button>
-        </form>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content, status_code=200)
-
-
-@app.post("/", response_class=HTMLResponse)
-async def handle_form(name: str = Form(...), sku: str = Form(...)):
-    """
-    При отправке формы сохраняет 'name' и 'sku' в БД и отдаёт страницу с подтверждением.
-    """
-    # 1) Собираем данные в Pydantic-модель
-    product_in = ProductCreate(name=name, sku=sku)
-
-    # 2) Пытаемся добавить новый товар в БД
-    query_insert = products.insert().values(
-        name=product_in.name,
-        sku=product_in.sku
+    rows = await database.fetch_all(select(products))
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "products": rows}
     )
-    try:
-        new_id = await database.execute(query_insert)
-    except Exception:
-        # Чаще всего тут уникальный constraint на sku «сломался»
-        raise HTTPException(
-            status_code=400,
-            detail="Невозможно сохранить товар: вероятно, такой SKU уже есть."
-        )
 
-    # 3) Получаем из БД только что вставленную запись по её id
-    query_select = select(products).where(products.c.id == new_id)
-    row = await database.fetch_one(query_select)
-    if row is None:
-        raise HTTPException(
-            status_code=500, detail="Ошибка чтения данных из БД.")
-
-    product = Product(**row)
-
-    # 4) Формируем HTML-ответ с подтверждением
-    html_resp = f"""
-    <!DOCTYPE html>
-    <html lang="ru">
-    <head>
-        <meta charset="UTF-8">
-        <title>Товар добавлен</title>
-    </head>
-    <body>
-        <h1>Товар успешно добавлен!</h1>
-        <p><strong>ID:</strong> {product.id}</p>
-        <p><strong>Название:</strong> {product.name}</p>
-        <p><strong>SKU:</strong> {product.sku}</p>
-        <br>
-        <a href="/">Добавить ещё один товар</a>
-    </body>
-    </html>
+@app.get("/new", response_class=HTMLResponse, tags=["products"])
+async def new_product_form(request: Request):
     """
-    return HTMLResponse(content=html_resp, status_code=200)
+    Форма добавления нового товара (только name).
+    """
+    return templates.TemplateResponse("new_product.html", {"request": request})
+
+@app.post("/new", response_class=HTMLResponse, tags=["products"])
+async def handle_new_product(request: Request, name: str = Form(...)):
+    """
+    Сохраняет новый товар, только поле name.
+    """
+    query = products.insert().values(name=name)
+    try:
+        new_id = await database.execute(query)
+    except Exception as exc:
+        raise HTTPException(400, f"Ошибка сохранения товара: {exc}")
+
+    row = await database.fetch_one(select(products).where(products.c.id == new_id))
+    if not row:
+        raise HTTPException(500, "Не удалось прочитать добавленный товар")
+
+    return templates.TemplateResponse("confirm.html", {"request": request, "product": row})
+
+@app.post("/delete/{product_id}", response_class=HTMLResponse, tags=["products"])
+async def delete_product(request: Request, product_id: int):
+    """
+    Удаляет товар по ID и перенаправляет на список.
+    """
+    # проверяем наличие
+    row = await database.fetch_one(select(products).where(products.c.id == product_id))
+    if not row:
+        raise HTTPException(404, "Товар не найден")
+    # удаляем
+    await database.execute(products.delete().where(products.c.id == product_id))
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/ozon/products/{product_id}/fetch", response_class=HTMLResponse, tags=["ozon"])
+async def fetch_ozon_price_html(request: Request, product_id: int):
+    try:
+        await create_price_record_from_ozon(product_id)
+    except HTTPException:
+        pass
+    return RedirectResponse(url="/", status_code=303)
+
+@app.post("/ozon/products/fetch_all", response_class=HTMLResponse, tags=["ozon"])
+async def fetch_ozon_all_html(request: Request):
+    await fetch_all_ozon_prices()
+    return RedirectResponse(url="/", status_code=303)
+
+# ----------------------------
+# 5. Запуск приложения
+# ----------------------------
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
-        "main:app",      # точка запуска: модуль main, переменная app
+        "main:app",
         host="127.0.0.1",
-        port=8000,
-        reload=True      # автоматически перезапускать при изменении кода
+        port=int(os.getenv("PORT", "8000")),
+        reload=True
     )

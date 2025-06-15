@@ -1,41 +1,42 @@
+# price_spy-main/schemas.py
+
 from pydantic import BaseModel
+from datetime import date
+from typing import Optional
+
+# === продукты ===
 
 class ProductBase(BaseModel):
     name: str
-    sku: str
 
 class ProductCreate(ProductBase):
-    pass
+    pass   # больше не просим sku у пользователя
 
 class Product(ProductBase):
-    id: int
+    id:  int
+    sku: Optional[str] = None
 
     class Config:
         orm_mode = True
 
-class CompetitorBase(BaseModel):
+# === конкуренты ===
+
+class Competitor(BaseModel):
+    id:   int
     name: str
-    base_url: str
-
-class CompetitorCreate(CompetitorBase):
-    pass
-
-class Competitor(CompetitorBase):
-    id: int
 
     class Config:
         orm_mode = True
 
-class PriceRecordBase(BaseModel):
-    product_id: int
+# === цены ===
+
+class PriceRecordCreate(BaseModel):
+    product_id:    int
     competitor_id: int
-    price: float
-    date: str
+    price:         float
+    date:          date
 
-class PriceRecordCreate(PriceRecordBase):
-    pass
-
-class PriceRecord(PriceRecordBase):
+class PriceRecord(PriceRecordCreate):
     id: int
 
     class Config:

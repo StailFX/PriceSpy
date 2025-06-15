@@ -1,0 +1,75 @@
+<!-- price_spy-main/templates/confirm.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>PriceSpy — Товар добавлен</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 60px auto;
+      background: #fff;
+      padding: 30px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .details p {
+      margin: 8px 0;
+      color: #555;
+      font-size: 16px;
+    }
+    .buttons {
+      margin-top: 30px;
+    }
+    .buttons a.button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      background-color: #007bff;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .buttons a.button:hover {
+      background-color: #0056b3;
+    }
+    .buttons a.button.list {
+      background-color: #28a745;
+    }
+    .buttons a.button.list:hover {
+      background-color: #1e7e34;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Товар успешно добавлен!</h1>
+    <div class="details">
+      <p><strong>ID:</strong> {{ product.id }}</p>
+      <p><strong>Название:</strong> {{ product.name }}</p>
+      {% if product.sku %}
+      <p><strong>SKU:</strong> {{ product.sku }}</p>
+      {% endif %}
+    </div>
+    <div class="buttons">
+      <a href="/" class="button list">Перейти к списку</a>
+      <a href="/new" class="button">Добавить ещё</a>
+    </div>
+  </div>
+</body>
+</html>
