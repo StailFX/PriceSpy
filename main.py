@@ -21,12 +21,12 @@ from contextlib import asynccontextmanager
 # 1. Настройка базы данных
 # ----------------------------
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./db.sqlite3")
 database = Database(DATABASE_URL)
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},  # для SQLite
+    connect_args={"check_same_thread": False},  # для SQLite + многопоточности
 )
 metadata = MetaData()
 
@@ -38,8 +38,7 @@ products = Table(
     Column("sku",  String(length=50), unique=True, nullable=True),
 )
 
-# пересоздаём схему при старте (для локальной разработки)
-metadata.drop_all(engine)
+# Создаем таблицы, если их нет (не удаляем существующие данные)
 metadata.create_all(engine)
 
 # ----------------------------
@@ -92,7 +91,7 @@ async def list_products(request: Request):
 @app.get("/new", response_class=HTMLResponse, tags=["products"])
 async def new_product_form(request: Request):
     """
-    Форма добавления нового товара (только name).
+    Форма создания нового товара (только name).
     """
     return templates.TemplateResponse("new_product.html", {"request": request})
 
@@ -118,16 +117,15 @@ async def delete_product(request: Request, product_id: int):
     """
     Удаляет товар по ID и перенаправляет на список.
     """
-    # проверяем наличие
     row = await database.fetch_one(select(products).where(products.c.id == product_id))
     if not row:
         raise HTTPException(404, "Товар не найден")
-    # удаляем
     await database.execute(products.delete().where(products.c.id == product_id))
     return RedirectResponse(url="/", status_code=303)
 
 @app.post("/ozon/products/{product_id}/fetch", response_class=HTMLResponse, tags=["ozon"])
 async def fetch_ozon_price_html(request: Request, product_id: int):
+    from .crud import create_price_record_from_ozon
     try:
         await create_price_record_from_ozon(product_id)
     except HTTPException:
@@ -136,6 +134,8 @@ async def fetch_ozon_price_html(request: Request, product_id: int):
 
 @app.post("/ozon/products/fetch_all", response_class=HTMLResponse, tags=["ozon"])
 async def fetch_ozon_all_html(request: Request):
+    from .crud import fetch_all_ozon_prices
+
     await fetch_all_ozon_prices()
     return RedirectResponse(url="/", status_code=303)
 
