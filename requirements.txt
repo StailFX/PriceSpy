@@ -1,0 +1,10 @@
+fastapi
+unicorn
+pydantic
+sqlalchemy
+databases
+celery[redis]
+redis
+requests
+beutifulsoup4
+aiosqlite
