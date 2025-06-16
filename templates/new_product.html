@@ -1,83 +1,47 @@
-<!-- price_spy-main/templates/new_product.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <title>PriceSpy — Добавить товар</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 500px;
-      margin: 60px auto;
-      background: #fff;
-      padding: 30px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      border-radius: 6px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    form label {
-      display: block;
-      margin-bottom: 8px;
-      color: #555;
-    }
-    form input[type="text"] {
-      width: 100%;
-      padding: 8px 10px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    .buttons {
-      text-align: center;
-    }
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 60px auto; background: #fff; padding: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border-radius: 6px; }
+    h1 { text-align: center; margin-bottom: 20px; color: #333; }
+    form label { display: block; margin-bottom: 8px; color: #555; }
+    form input[type="text"] { width: 100%; padding: 8px 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+    .buttons { text-align: center; }
     .buttons button,
-    .buttons a.button {
-      display: inline-block;
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 14px;
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      background-color: #007bff;
-      text-decoration: none;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
-    .buttons button:hover,
-    .buttons a.button:hover {
-      background-color: #0056b3;
-    }
-    .buttons a.button.cancel {
-      background-color: #6c757d;
-    }
-    .buttons a.button.cancel:hover {
-      background-color: #565e64;
-    }
+    .buttons a { display: inline-block; padding: 10px 20px; margin: 5px; font-size: 14px; border-radius: 4px; color: #fff; text-decoration: none; cursor: pointer; transition: background-color 0.2s; }
+    .buttons button.save { background: #28a745; } /* зелёная */ 
+    .buttons button.save:hover { background: #1e7e34; }
+    .buttons a.cancel  { background: #6c757d; } /* серая */
+    .buttons a.cancel:hover { background: #565e64; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Добавить новый товар</h1>
-    <form action="/new" method="post">
-      <label for="name">Название товара:</label>
-      <input type="text" id="name" name="name" placeholder="Например: iPhone 14" required>
-      <div class="buttons">
-        <button type="submit">Сохранить</button>
-        <a href="/" class="button cancel">Отмена</a>
-      </div>
-    </form>
-  </div>
-</body>
-</html>
+    <div class="container">
+      <h1>Добавить новый товар</h1>
+  
+      {% if error %}
+        <div class="error" style="
+             background:#f8d7da; color:#842029; padding:10px;
+             border:1px solid #f5c2c7; border-radius:4px;
+             margin-bottom:15px;
+           ">
+          {{ error }}
+        </div>
+      {% endif %}
+  
+      <form action="/new" method="post">
+        <label for="name">Название товара:</label>
+        <input type="text" id="name" name="name" placeholder="Например: iPhone 14" required>
+  
+        <div class="buttons">
+          <button type="submit" class="save">Сохранить</button>
+          <a href="/dashboard" class="cancel">Отмена</a>
+        </div>
+      </form>
+    </div>
+  </body>
+  </html>
