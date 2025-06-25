@@ -1,112 +1,68 @@
-<!-- price_spy-main/templates/register.html -->
+<!-- templates/register.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Регистрация — PriceSpy</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 400px;
-      margin: 80px auto;
-      background: #fff;
-      padding: 30px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      border-radius: 6px;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 20px;
-    }
-    .error {
-      background: #f8d7da;
-      color: #842029;
-      padding: 10px;
-      border: 1px solid #f5c2c7;
-      border-radius: 4px;
-      margin-bottom: 15px;
-    }
-    form label {
-      display: block;
-      margin-bottom: 8px;
-      color: #555;
-      font-size: 14px;
-    }
-    form input[type="text"],
-    form input[type="password"] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-    .buttons {
-      text-align: center;
-    }
-    .buttons button,
-    .buttons a {
-      padding: 10px 20px;
-      font-size: 14px;
-      border: none;
-      border-radius: 4px;
-      color: #fff;
-      background-color: #007bff;
-      text-decoration: none;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-      margin: 0 5px;
-    }
-    .buttons button:hover,
-    .buttons a:hover {
-      background-color: #0056b3;
-    }
-    .buttons a.cancel {
-      background-color: #6c757d;
-    }
-    .buttons a.cancel:hover {
-      background-color: #565e64;
-    }
-    .links {
-      text-align: center;
-      margin-top: 10px;
-    }
-    .links a {
-      color: #007bff;
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .links a:hover {
-      text-decoration: underline;
-    }
-  </style>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
 </head>
-<body>
-  <div class="container">
-    <h1>Регистрация</h1>
-    {% if error %}
-      <div class="error">{{ error }}</div>
-    {% endif %}
-    <form action="/register" method="post">
-      <label for="username">Логин:</label>
-      <input type="text" id="username" name="username" placeholder="Введите логин" required>
+<body class="bg-gray-100 text-gray-800">
 
-      <label for="password">Пароль:</label>
-      <input type="password" id="password" name="password" placeholder="Введите пароль" required>
+  <!-- Шапка -->
+  <header class="bg-white shadow">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="/dashboard" class="text-2xl font-bold text-gray-900">PriceSpy</a>
+      <a href="/login" class="text-sm text-blue-600 hover:underline">Войти</a>
+    </div>
+  </header>
 
-      <div class="buttons">
-        <button type="submit">Зарегистрироваться</button>
-        <a href="/login" class="cancel">Отмена</a>
+  <!-- Форма регистрации -->
+  <main class="container mx-auto px-4 py-12">
+    <div class="max-w-md mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+      <div class="px-6 py-8">
+        <h2 class="text-2xl font-bold mb-6 text-center">Создать аккаунт</h2>
+        <form action="/register" method="post" class="space-y-4">
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+              Имя пользователя
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              placeholder="Введите логин"
+              class="block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
+            />
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+              Пароль
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              placeholder="Введите пароль"
+              class="block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          >
+            Зарегистрироваться
+          </button>
+        </form>
+        <p class="mt-6 text-center text-sm text-gray-600">
+          Уже есть аккаунт?
+          <a href="/login" class="text-blue-600 hover:underline">Войти</a>
+        </p>
       </div>
-    </form>
-  </div>
+    </div>
+  </main>
+
 </body>
 </html>

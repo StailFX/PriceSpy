@@ -1,35 +1,44 @@
-<!-- price_spy-main/templates/confirm.html -->
+<!-- templates/confirm.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PriceSpy — Товар добавлен</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 80px auto; background: #fff; padding: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border-radius: 6px; text-align: center; }
-    h1 { color: #333; margin-bottom: 20px; font-size: 24px; }
-    .details { margin: 20px 0; font-size: 18px; color: #555; }
-    .details p { margin: 8px 0; }
-    .buttons { margin-top: 30px; }
-    .buttons a { display: inline-block; padding: 10px 20px; margin: 0 10px; font-size: 14px; color: #fff; text-decoration: none; border-radius: 4px; transition: background-color 0.2s; }
-    .buttons a.dashboard { background: #28a745; }
-    .buttons a.dashboard:hover { background: #1e7e34; }
-    .buttons a.new { background: #007bff; }
-    .buttons a.new:hover { background: #0056b3; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Товар добавлен — PriceSpy</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
 </head>
-<body>
-  <div class="container">
-    <h1>Товар успешно добавлен!</h1>
-    <div class="details">
-      <p><strong>ID:</strong> {{ product.id }}</p>
-      <p><strong>Название:</strong> {{ product.name }}</p>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Шапка -->
+  <header class="bg-white shadow">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="/dashboard" class="text-2xl font-bold text-gray-900">PriceSpy</a>
+      <a href="/logout" class="text-sm text-gray-600 hover:underline">Выход</a>
     </div>
-    <div class="buttons">
-      <a href="/dashboard" class="dashboard">На дашборд</a>
-      <a href="/new" class="new">Добавить ещё</a>
+  </header>
+
+  <!-- Подтверждение -->
+  <main class="container mx-auto px-4 py-12">
+    <div class="max-w-md mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+      <div class="px-6 py-8 text-center">
+        <h1 class="text-2xl font-bold mb-4">Товар успешно добавлен!</h1>
+        <div class="text-gray-700 mb-6 space-y-2">
+          <p><span class="font-semibold">ID:</span> {{ product.id }}</p>
+          <p><span class="font-semibold">Название:</span> {{ product.name }}</p>
+        </div>
+        <div class="flex justify-center space-x-4">
+          <a href="/dashboard"
+             class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition">
+            На дашборд
+          </a>
+          <a href="/new"
+             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            Добавить ещё
+          </a>
+        </div>
+      </div>
     </div>
-  </div>
+  </main>
+
 </body>
 </html>

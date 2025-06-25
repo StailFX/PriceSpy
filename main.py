@@ -14,35 +14,34 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from databases import Database
-from sqlalchemy import (
-    create_engine, MetaData, Table, Column,
-    Integer, String, select
+from sqlalchemy import select
+from contextlib import asynccontextmanager 
+
+from database import database
+from models import products, users, competitors
+from models import price_records
+from crud import (
+    create_price_record_from_ozon,
+    get_price_records_by_product,
+    get_competitor,
+    search_product_urls
 )
-from contextlib import asynccontextmanager
+import uvicorn
 
 # ----------------------------
-# 1. Настройка базы данных
+# 1. Инициализация приложения
 # ----------------------------
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./db.sqlite3")
-database = Database(DATABASE_URL)
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-metadata = MetaData()
 
-products = Table(
-    "products", metadata,
-    Column("id",   Integer, primary_key=True),
-    Column("name", String(255), nullable=False, unique=True),
-    Column("sku",  String(50),  unique=True, nullable=True),
-)
-users = Table(
-    "users", metadata,
-    Column("id",              Integer, primary_key=True),
-    Column("username",        String(50), unique=True, nullable=False),
-    Column("hashed_password", String(128),           nullable=False),
-    Column("role",            String(20),            nullable=False),  # 'admin' or 'user'
-)
-metadata.create_all(engine)
+# ----------------------------
+# 2. Шаблоны
+# ----------------------------
+templates = Jinja2Templates(directory="templates")
+
+# main.py
+from models import metadata
+from database import engine  # ← импортируем engine и metadata из models.py
+
+metadata.create_all(engine)  # ← создаём таблицы
 
 # ----------------------------
 # 2. JWT и безопасность
@@ -87,24 +86,46 @@ class Product(ProductCreate):
 # ----------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 1) Подключаемся к БД
     await database.connect()
-    # если нет ни одного пользователя – создаём admin/user
-    row = await database.fetch_one(select(users).limit(1))
-    if not row:
-        await database.execute(users.insert().values(
-            username="admin",
-            hashed_password=pwd_context.hash("admin"),
-            role="admin"
-        ))
-        await database.execute(users.insert().values(
-            username="user",
-            hashed_password=pwd_context.hash("user"),
-            role="user"
-        ))
+
+    # 2) Создаём дефолтных пользователей, если их нет
+    for uname, pwd, role in [
+        ("admin", "admin", "admin"),
+        ("user",  "user",  "user")
+    ]:
+        existing = await database.fetch_one(
+            select(users).where(users.c.username == uname)
+        )
+        if not existing:
+            await database.execute(
+                users.insert().values(
+                    username=uname,
+                    hashed_password=pwd_context.hash(pwd),
+                    role=role
+                )
+            )
+
+    # 3) Создаём конкурента Ozon, если не найден
+    ozon = await database.fetch_one(
+        select(competitors).where(competitors.c.name == "Ozon")
+    )
+    if not ozon:
+        await database.execute(
+            competitors.insert().values(name="Ozon")
+        )
+
+    # 4) Передаём управление фреймворку
     yield
+
+    # 5) Отключаем БД при завершении
     await database.disconnect()
 
 app = FastAPI(lifespan=lifespan)
+
+@app.on_event("shutdown")
+async def shutdown():
+    await database.disconnect()
 
 # ----------------------------
 # 5. Утилиты аутентификации
@@ -360,6 +381,92 @@ async def web_logout():
     resp = RedirectResponse("/login", status_code=302)
     resp.delete_cookie("Authorization")
     return resp
+
+
+# ----------------------------
+# 10. Маршрут для запуска парсера
+# ----------------------------
+
+import redis.asyncio as redis
+from fastapi import BackgroundTasks
+
+REDIS_URL = "redis://localhost:6379"
+redis_client = redis.Redis.from_url(REDIS_URL)
+
+@app.post("/parse/trigger")
+async def trigger_ozon_parser(background_tasks: BackgroundTasks, u: User = Depends(require_admin)):
+    rows = await database.fetch_all(select(products))
+    for r in rows:
+        await redis_client.rpush("price_tasks", str(r["id"]))  # добавляем в очередь
+    return {"status": "Задачи добавлены в очередь Redis"}
+
+
+from routes.ozon_routes import router as ozon_router
+app.include_router(ozon_router)
+
+@app.post("/products/{pid}/fetch_and_show")
+async def web_fetch_and_show(request: Request, pid: int):
+    # Авторизация по cookie
+    cookie = request.cookies.get("Authorization", "")
+    if not cookie.startswith("Bearer "):
+        return RedirectResponse("/login", status_code=302)
+    token = cookie.removeprefix("Bearer ").strip()
+    try:
+        await get_current_user(token)
+    except HTTPException:
+        return RedirectResponse("/login", status_code=302)
+
+    # Ждём, пока парсер вставит новую запись
+    await create_price_record_from_ozon(pid)
+
+    # Редиректим на страницу деталей
+    return RedirectResponse(f"/products/{pid}/details", status_code=302)
+
+# -------------------------------------------------------------------
+# 2) Страница «Подробнее» (используем сохранённый URL)
+# -------------------------------------------------------------------
+@app.get("/products/{pid}/details", response_class=HTMLResponse)
+async def web_product_details(request: Request, pid: int):
+    # Авторизация по cookie
+    cookie = request.cookies.get("Authorization", "")
+    if not cookie.startswith("Bearer "):
+        return RedirectResponse("/login", status_code=302)
+    token = cookie.removeprefix("Bearer ").strip()
+    try:
+        user = await get_current_user(token)
+    except HTTPException:
+        return RedirectResponse("/login", status_code=302)
+
+    # 1) Достаём товар
+    prod = await database.fetch_one(
+        select(products).where(products.c.id == pid)
+    )
+    if not prod:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # 2) История цен + имена конкурентов
+    raw_hist = await get_price_records_by_product(pid)
+    price_history = []
+    for rec in raw_hist:
+        comp = await get_competitor(rec.competitor_id)
+        price_history.append(rec.model_copy(update={"competitor_name": comp.name}))
+    last_price = price_history[-1] if price_history else None
+
+    # 3) Берём URL из последнего рекорда (если есть)
+    product_url = getattr(last_price, "url", None) if last_price else None
+
+    # 4) Рендерим шаблон
+    return templates.TemplateResponse(
+        "details.html",
+        {
+            "request":       request,
+            "user":          user,
+            "product":       prod,
+            "last_price":    last_price,
+            "price_history": price_history,
+            "product_url":   product_url
+        }
+    )
 
 # ----------------------------
 # 8. Запуск приложения

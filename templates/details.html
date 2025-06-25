@@ -1,0 +1,108 @@
+<!-- templates/details.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Детали товара — {{ product.name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Шапка -->
+  <header class="bg-white shadow">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="/dashboard" class="text-2xl font-bold text-gray-900">PriceSpy</a>
+      <a href="/logout" class="text-sm text-gray-600 hover:underline">Выход</a>
+    </div>
+  </header>
+
+  <!-- Основной контент -->
+  <main class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+      <!-- Заголовок -->
+      <div class="px-6 py-4 border-b">
+        <h1 class="text-3xl font-bold">{{ product.name }}</h1>
+      </div>
+
+      <!-- Блок с последней ценой и ссылкой -->
+      <div class="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h2 class="text-xl font-semibold mb-2">Последняя цена</h2>
+          {% if last_price %}
+            <p class="text-2xl text-green-600 font-bold">
+              {{ '{:,.2f}'.format(last_price.price) }} ₽
+            </p>
+            <p class="text-sm text-gray-500 mt-1">
+              Обновлено: {{ last_price.date.strftime('%d.%m.%Y') }}
+            </p>
+          {% else %}
+            <p class="text-gray-500">Информация о цене отсутствует.</p>
+          {% endif %}
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold mb-2">Ссылка на товар</h2>
+          {% if product_url %}
+            <a href="{{ product_url }}" target="_blank"
+               class="text-blue-600 underline break-all">
+              {{ product_url }}
+            </a>
+          {% else %}
+            <p class="text-gray-500">Ссылка не найдена.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- История цен -->
+      <div class="px-6 py-4 border-t">
+        <h2 class="text-xl font-semibold mb-4">История цен</h2>
+        {% if price_history %}
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Дата
+                  </th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Цена
+                  </th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                    Конкурент
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                {% for rec in price_history %}
+                <tr>
+                  <td class="px-4 py-2 whitespace-nowrap">{{ rec.date.strftime('%d.%m.%Y') }}</td>
+                  <td class="px-4 py-2 whitespace-nowrap">{{ '{:,.2f}'.format(rec.price) }} ₽</td>
+                  <td class="px-4 py-2 whitespace-nowrap">{{ rec.competitor_name }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-gray-500">Нет записей об истории цен.</p>
+        {% endif %}
+      </div>
+
+      <!-- Кнопки действий -->
+      <div class="px-6 py-4 border-t flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2">
+        <a href="/dashboard"
+           class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-center">
+          Назад
+        </a>
+        <form action="/products/{{ product.id }}/fetch_and_show" method="post">
+          <button type="submit"
+                  class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 w-full md:w-auto">
+            Обновить цену
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>

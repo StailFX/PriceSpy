@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter
 from typing import List
-from ..crud import create_price_record_from_ozon, fetch_all_ozon_prices
-from ..schemas import PriceRecord
+from crud import create_price_record_from_ozon, fetch_all_ozon_prices
+from schemas import PriceRecord
 
 router = APIRouter(prefix="/ozon", tags=["ozon"])
 

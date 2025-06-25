@@ -1,25 +1,23 @@
-# price_spy-main/crud.py
-
-from datetime import date
+# crud.py
+from datetime import datetime
+from typing import List
+from sqlalchemy import select
 from fastapi import HTTPException
+from database import database
+from models import products, competitors, price_records
+from schemas import ProductCreate, Product, CompetitorCreate, Competitor, PriceRecordCreate, PriceRecord
 
-from .database import database
-from .models import products, competitors, price_records
-from .schemas import (
-    ProductCreate, Product,
-    CompetitorCreate, Competitor,
-    PriceRecordCreate, PriceRecord
-)
 
 # ----------------------------
-# Products CRUD
+# CRUD для Products
 # ----------------------------
 
 async def create_product(prod_in: ProductCreate) -> Product:
-    ins = products.insert().values(name=prod_in.name)
-    prod_id = await database.execute(ins)
-    row = await database.fetch_one(products.select().where(products.c.id == prod_id))
+    query = products.insert().values(**prod_in.model_dump())
+    product_id = await database.execute(query)
+    row = await database.fetch_one(products.select().where(products.c.id == product_id))
     return Product(**row)
+
 
 async def get_product(product_id: int) -> Product:
     row = await database.fetch_one(products.select().where(products.c.id == product_id))
@@ -27,149 +25,158 @@ async def get_product(product_id: int) -> Product:
         raise HTTPException(status_code=404, detail="Product not found")
     return Product(**row)
 
-async def list_products() -> list[Product]:
-    rows = await database.fetch_all(products.select())
+
+async def get_products(skip: int = 0, limit: int = 100) -> list[Product]:
+    rows = await database.fetch_all(products.select().offset(skip).limit(limit))
     return [Product(**r) for r in rows]
-
-async def update_product(product_id: int, prod_in: ProductCreate) -> Product:
-    # Проверяем, что существует
-    await get_product(product_id)
-    upd = products.update().where(products.c.id == product_id).values(name=prod_in.name)
-    await database.execute(upd)
-    return await get_product(product_id)
-
-async def delete_product(product_id: int) -> None:
-    # Проверяем, что существует
-    await get_product(product_id)
-    await database.execute(products.delete().where(products.c.id == product_id))
 
 
 # ----------------------------
-# Competitors CRUD
+# CRUD для Competitors
 # ----------------------------
 
 async def create_competitor(comp_in: CompetitorCreate) -> Competitor:
-    ins = competitors.insert().values(name=comp_in.name)
-    comp_id = await database.execute(ins)
-    row = await database.fetch_one(competitors.select().where(competitors.c.id == comp_id))
+    query = competitors.insert().values(**comp_in.model_dump())
+    competitor_id = await database.execute(query)
+    row = await database.fetch_one(competitors.select().where(competitors.c.id == competitor_id))
     return Competitor(**row)
 
-async def get_competitor(comp_id: int) -> Competitor:
-    row = await database.fetch_one(competitors.select().where(competitors.c.id == comp_id))
+
+async def get_competitor(competitor_id: int) -> Competitor:
+    row = await database.fetch_one(competitors.select().where(competitors.c.id == competitor_id))
     if not row:
         raise HTTPException(status_code=404, detail="Competitor not found")
     return Competitor(**row)
 
-async def list_competitors() -> list[Competitor]:
-    rows = await database.fetch_all(competitors.select())
+
+async def get_competitors(skip: int = 0, limit: int = 100) -> list[Competitor]:
+    rows = await database.fetch_all(competitors.select().offset(skip).limit(limit))
     return [Competitor(**r) for r in rows]
 
-async def update_competitor(comp_id: int, comp_in: CompetitorCreate) -> Competitor:
-    await get_competitor(comp_id)
-    upd = competitors.update().where(competitors.c.id == comp_id).values(name=comp_in.name)
-    await database.execute(upd)
-    return await get_competitor(comp_id)
-
-async def delete_competitor(comp_id: int) -> None:
-    await get_competitor(comp_id)
-    await database.execute(competitors.delete().where(competitors.c.id == comp_id))
-
 
 # ----------------------------
-# PriceRecords CRUD
+# CRUD для PriceRecords
 # ----------------------------
 
-async def create_price_record(rec_in: PriceRecordCreate) -> PriceRecord:
-    # Проверяем, что указанный товар и конкурент существуют
-    await get_product(rec_in.product_id)
-    await get_competitor(rec_in.competitor_id)
+async def create_price_record(record_in: PriceRecordCreate) -> PriceRecord:
+    # Проверяем существование товара и конкурента
+    await get_product(record_in.product_id)
+    await get_competitor(record_in.competitor_id)
 
-    ins = price_records.insert().values(**rec_in.model_dump())
-    rec_id = await database.execute(ins)
-    row = await database.fetch_one(price_records.select().where(price_records.c.id == rec_id))
+    query = price_records.insert().values(**record_in.model_dump())
+    record_id = await database.execute(query)
+    row = await database.fetch_one(price_records.select().where(price_records.c.id == record_id))
     return PriceRecord(**row)
 
-async def get_price_record(rec_id: int) -> PriceRecord:
-    row = await database.fetch_one(price_records.select().where(price_records.c.id == rec_id))
+
+async def get_price_record(record_id: int) -> PriceRecord:
+    row = await database.fetch_one(price_records.select().where(price_records.c.id == record_id))
     if not row:
         raise HTTPException(status_code=404, detail="Price record not found")
     return PriceRecord(**row)
 
-async def list_price_records() -> list[PriceRecord]:
-    rows = await database.fetch_all(price_records.select())
-    return [PriceRecord(**r) for r in rows]
 
-async def update_price_record(rec_id: int, rec_in: PriceRecordCreate) -> PriceRecord:
-    # Проверяем существование
-    await get_price_record(rec_id)
-    # Обновляем
-    upd = price_records.update().where(price_records.c.id == rec_id).values(**rec_in.model_dump())
-    await database.execute(upd)
-    return await get_price_record(rec_id)
+async def get_price_records_by_product(product_id: int) -> List[PriceRecord]:
+    # 1) Достаём все записи из price_records по продукту, сортируя по дате
+    query = (
+        select(price_records)
+        .where(price_records.c.product_id == product_id)
+        .order_by(price_records.c.date)
+    )
+    rows = await database.fetch_all(query)
 
-async def delete_price_record(rec_id: int) -> None:
-    await get_price_record(rec_id)
-    await database.execute(price_records.delete().where(price_records.c.id == rec_id))
+    result: List[PriceRecord] = []
+    for r in rows:
+        # r — RowMapping, всегда содержит 'url'
+        rdict = dict(r)
 
+        # 2) Подтягиваем имя конкурента
+        comp_row = await database.fetch_one(
+            select(competitors.c.name).where(competitors.c.id == rdict["competitor_id"])
+        )
+        rdict["competitor_name"] = comp_row["name"]
+
+        # 3) Превращаем в Pydantic-модель
+        result.append(PriceRecord(**rdict))
+
+    return result
 
 # ----------------------------
-# OZON Integration
+# Интеграция с Ozon
 # ----------------------------
 
-from .ozon_scraper import search_product_urls, parse_ozon_product
+def search_product_urls(query):
+    from parsers.ozon_parser import init_driver, search_and_get_links
+    driver = init_driver()
+    try:
+        result = search_and_get_links(driver, query)
+        driver.quit()
+        return result
+    except Exception as e:
+        driver.quit()
+        raise e
+
+
+def parse_ozon_product(url: str):
+    from parsers.ozon_parser import init_driver, parse_product
+    driver = init_driver()
+    try:
+        result = parse_product(driver, url)
+        driver.quit()
+        return result
+    except Exception as e:
+        driver.quit()
+        raise e
+
 
 async def create_price_record_from_ozon(product_id: int) -> PriceRecord:
-    """
-    Автозапись цены с Ozon:
-    1) Берём name из БД
-    2) Ищем URL через search_product_urls
-    3) Парсим через parse_ozon_product
-    4) Берём competitor_id для Ozon
-    5) Сохраняем в price_records
-    """
-    # 1) Получаем товар
-    prod = await database.fetch_one(products.select().where(products.c.id == product_id))
+    # 1) Берём товар
+    prod = await database.fetch_one(
+        products.select().where(products.c.id == product_id)
+    )
     if not prod:
         raise HTTPException(status_code=404, detail="Product not found")
     name = prod["name"]
 
-    # 2) Ищем URL
-    urls = search_product_urls(name, max_results=1)
+    # 2) Ищем URL и парсим страницу Оzon
+    urls = search_product_urls(name)
     if not urls:
         raise HTTPException(status_code=500, detail="Ozon: item not found")
+    product_url = urls[0]
+    info = parse_ozon_product(product_url)
+    price_str = info[3]
+    price = float("".join(c for c in price_str if c.isdigit() or c == "."))
 
-    # 3) Парсим данные
-    info = parse_ozon_product(urls[0])
-    price = info.get("price")
-    record_date = info.get("date") or date.today()
-    if price is None:
-        raise HTTPException(status_code=500, detail="Ozon: price parsing failed")
-
-    # 4) Получаем competitor_id для Ozon
-    comp = await database.fetch_one(
+    # 3) Находим конкурента Ozon
+    comp_row = await database.fetch_one(
         competitors.select().where(competitors.c.name == "Ozon")
     )
-    if not comp:
+    if not comp_row:
         raise HTTPException(status_code=500, detail="Competitor 'Ozon' missing")
-    comp_id = comp["id"]
+    competitor_id = comp_row["id"]
+    competitor_name = comp_row["name"]
 
-    # 5) Сохраняем запись
+    # 4) Готовим новую запись
     rec_in = PriceRecordCreate(
         product_id=product_id,
-        competitor_id=comp_id,
+        competitor_id=competitor_id,
         price=price,
-        date=record_date,
+        url=product_url,
+        date=datetime.utcnow().date()
     )
-    return await create_price_record(rec_in)
+
+    # 5) Вставляем в БД и возвращаем Pydantic-модель со всеми полями
+    new_id = await database.execute(
+        price_records.insert().values(**rec_in.model_dump())
+    )
+
+    return PriceRecord(
+        id=new_id,
+        **rec_in.model_dump(),
+        competitor_name=competitor_name
+    )
 
 
 async def fetch_all_ozon_prices() -> list[PriceRecord]:
-    """
-    Создаёт новую запись цены для каждого продукта в базе
-    """
     prods = await database.fetch_all(products.select())
-    out = []
-    for r in prods:
-        rec = await create_price_record_from_ozon(r["id"])
-        out.append(rec)
-    return out
+    return [await create_price_record_from_ozon(p["id"]) for p in prods]

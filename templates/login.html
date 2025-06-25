@@ -1,43 +1,61 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Вход — PriceSpy</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
-    .container { max-width: 400px; margin: 100px auto; background: #fff; padding: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); border-radius: 6px; }
-    h1 { text-align: center; color: #333; margin-bottom: 20px; }
-    .error { background: #f8d7da; color: #842029; padding: 10px; border: 1px solid #f5c2c7; border-radius: 4px; margin-bottom: 15px; }
-    form label { display: block; margin-bottom: 8px; color: #555; font-size: 14px; }
-    form input[type="text"], form input[type="password"] { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
-    .buttons { text-align: center; }
-    .buttons button { padding: 10px 20px; font-size: 14px; border: none; border-radius: 4px; background-color: #007bff; color: #fff; cursor: pointer; transition: background-color 0.2s; }
-    .buttons button:hover { background-color: #0056b3; }
-    .footer-links { text-align: center; margin-top: 10px; }
-    .footer-links a { color: #007bff; text-decoration: none; margin: 0 10px; font-size: 14px; }
-    .footer-links a:hover { text-decoration: underline; }
-  </style>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
 </head>
-<body>
-  <div class="container">
-    <h1>Вход в PriceSpy</h1>
-    {% if error %}
-      <div class="error">{{ error }}</div>
-    {% endif %}
-    <form action="/login" method="post">
-      <label for="username">Логин:</label>
-      <input type="text" id="username" name="username" placeholder="Введите логин" required>
-      <label for="password">Пароль:</label>
-      <input type="password" id="password" name="password" placeholder="Введите пароль" required>
-      <div class="buttons">
-        <button type="submit">Войти</button>
-      </div>
-    </form>
-    <div class="footer-links">
-      <a href="/register">Регистрация</a>
-      <a href="/">На главную</a>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Шапка -->
+  <header class="bg-white shadow">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <a href="/dashboard" class="text-2xl font-bold text-gray-900">PriceSpy</a>
+      <a href="/register" class="text-sm text-blue-600 hover:underline">Регистрация</a>
     </div>
-  </div>
+  </header>
+
+  <!-- Форма входа -->
+  <main class="container mx-auto px-4 py-12">
+    <div class="max-w-md mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+      <div class="px-6 py-8">
+        <h2 class="text-2xl font-bold mb-6 text-center">Вход в аккаунт</h2>
+        <form action="/login" method="post" class="space-y-4">
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              class="block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
+            />
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              class="block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring focus:border-blue-300"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          >
+            Войти
+          </button>
+        </form>
+        <p class="mt-6 text-center text-sm text-gray-600">
+          Нет аккаунта?
+          <a href="/register" class="text-blue-600 hover:underline">Зарегистрироваться</a>
+        </p>
+      </div>
+    </div>
+  </main>
+
 </body>
 </html>
