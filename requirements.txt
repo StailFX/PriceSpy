@@ -19,3 +19,4 @@ sqlparse==0.5.3
 starlette==0.46.2
 uvicorn==0.34.3
 undetected-chromedriver==3.5.5
+python-multipart==0.0.20

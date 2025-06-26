@@ -1,30 +1,40 @@
-version: '3.8'
+# docker-compose.yml
 
 services:
-  backend:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: "sqlite:///./db.sqlite3"
-    volumes:
-      - .:/app
-    depends_on:
-      - redis
 
   redis:
     image: redis:alpine
+    restart: always
     ports:
       - "6379:6379"
 
-  celery-worker:
+  app:
     build: .
-    command: celery -A tasks.celery_app worker --loglevel=info
+    restart: always
     depends_on:
       - redis
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./db.sqlite3:/app/db.sqlite3
+    environment:
+      SECRET_KEY: change-me
+      REDIS_URL: redis://redis:6379
+    command: >
+      uvicorn main:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
 
-  celery-beat:
+  worker:
     build: .
-    command: celery -A tasks.celery_app beat --loglevel=info
+    restart: always
     depends_on:
       - redis
+    volumes:
+      - .:/app
+    environment:
+      REDIS_URL: redis://redis:6379
+    command: >
+      python worker.py

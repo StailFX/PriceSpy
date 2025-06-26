@@ -1,29 +1,41 @@
-# syntax=docker/dockerfile:1
+# Dockerfile
 
-# 1) Берём официальный лёгкий образ Python 3.10
 FROM python:3.10-slim
 
-# 2) Устанавливаем системные пакеты, нужные для bcrypt и SQLite
-RUN apt-get update \
- && apt-get install -y --no-install-recommends \
-      build-essential \
-      libffi-dev \
-      libssl-dev \
-      sqlite3 \
- && rm -rf /var/lib/apt/lists/*
+# 1) Устанавливаем утилиты для добавления Google-Chrome
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      wget \
+      gnupg2 \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# 3) Создаём рабочую директорию
+# 2) Добавляем ключ и репозиторий Google-Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+ && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
+      > /etc/apt/sources.list.d/google-chrome.list \
+ && apt-get update
+
+# 3) Устанавливаем сам Google-Chrome (последней версии)  
+RUN apt-get install -y --no-install-recommends \
+      google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4) Указываем где ждать бинарник Chrome
+ENV CHROME_BIN=/usr/bin/google-chrome-stable
+
+# 5) Рабочая директория
 WORKDIR /app
 
-# 4) Копируем зависимости и ставим их
+# 6) Устанавливаем Python-зависимости
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5) Копируем весь код приложения
+# 7) Копируем код
 COPY . .
 
-# 6) Открываем порт, на котором будет слушать Uvicorn
+# 8) Экспоним порт
 EXPOSE 8000
 
-# 7) По умолчанию запускаем ваш FastAPI через Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 9) Запуск Uvicorn (---reload можно убрать в продакшене)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
