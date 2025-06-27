@@ -1,4 +1,5 @@
 # docker-compose.yml
+version: '3.8'
 
 services:
 
@@ -9,14 +10,22 @@ services:
       - "6379:6379"
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: always
     depends_on:
       - redis
     ports:
       - "8000:8000"
+    # установить рабочую папку внутри контейнера
+    working_dir: /app
     volumes:
-      - .:/app
+      # монтируем только код приложения
+      - ./src/PriceSpy:/app
+      # монтируем шаблоны, если они лежат вне src (или уберите, если перенесли в src/PriceSpy/templates)
+      - ./templates:/app/templates
+      # монтируем локальную БД
       - ./db.sqlite3:/app/db.sqlite3
     environment:
       SECRET_KEY: change-me
@@ -28,12 +37,15 @@ services:
         --reload
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: always
     depends_on:
       - redis
+    working_dir: /app
     volumes:
-      - .:/app
+      - ./src/PriceSpy:/app
     environment:
       REDIS_URL: redis://redis:6379
     command: >

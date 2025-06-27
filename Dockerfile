@@ -1,41 +1,48 @@
-# Dockerfile
+# -------- Stage 1: Builder --------
+  FROM python:3.10-slim-bookworm AS builder
 
-FROM python:3.10-slim
-
-# 1) Устанавливаем утилиты для добавления Google-Chrome
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      wget \
-      gnupg2 \
-      ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# 2) Добавляем ключ и репозиторий Google-Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
- && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
-      > /etc/apt/sources.list.d/google-chrome.list \
- && apt-get update
-
-# 3) Устанавливаем сам Google-Chrome (последней версии)  
-RUN apt-get install -y --no-install-recommends \
-      google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
-
-# 4) Указываем где ждать бинарник Chrome
-ENV CHROME_BIN=/usr/bin/google-chrome-stable
-
-# 5) Рабочая директория
-WORKDIR /app
-
-# 6) Устанавливаем Python-зависимости
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 7) Копируем код
-COPY . .
-
-# 8) Экспоним порт
-EXPOSE 8000
-
-# 9) Запуск Uvicorn (---reload можно убрать в продакшене)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+  # Настройки окружения Python
+  ENV PYTHONDONTWRITEBYTECODE=1 \
+      PYTHONUNBUFFERED=1
+  
+  WORKDIR /app
+  
+  # Установим зависимости сначала отдельно, для кеширования слоя
+  COPY requirements.txt /app/
+  RUN pip install --no-cache-dir -r requirements.txt
+  
+  # Копируем весь код и шаблоны
+  COPY src/PriceSpy        /app/PriceSpy
+  COPY templates           /app/templates
+  COPY .env.example        /app/.env.example
+  
+  # Запустим линтер и тесты в контейнере-сборщике
+  # (предполагается, что в requirements.txt линтеры и pytest включены)
+  RUN pip install --no-cache-dir black flake8 pytest \
+      && black --check /app/PriceSpy \
+      && flake8 /app/PriceSpy \
+      && pytest --maxfail=1 --disable-warnings -q
+  
+  # -------- Stage 2: Runner --------
+  FROM python:3.10-slim-bookworm
+  
+  ENV PYTHONDONTWRITEBYTECODE=1 \
+      PYTHONUNBUFFERED=1
+  
+  WORKDIR /app
+  
+  # Копируем только то, что нужно для запуска
+  COPY --from=builder /app/PriceSpy       /app/PriceSpy
+  COPY --from=builder /app/templates      /app/templates
+  COPY --from=builder /app/.env.example   /app/.env.example
+  COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+  
+  # Настроим переменные окружения (можно и декларативно через docker-compose)
+  ENV REDIS_URL=redis://redis:6379
+  # SECRET_KEY should be provided via a .env file or Docker secrets
+  
+  EXPOSE 8000
+  
+  # Запуск приложения
+  CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+  
