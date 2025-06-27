@@ -1,0 +1,136 @@
+# Byte-compiled Python files
+
+**pycache**/
+\*.py\[cod]
+\*\$py.class
+
+# C extensions
+
+\*.so
+
+# Distribution / packaging
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+\*.egg-info/
+.installed.cfg
+\*.egg
+
+# Installer logs
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.\*
+.cache
+.pytest\_cache/
+nosetests.xml
+coverage.xml
+\*,cover
+
+# Translations
+
+\*.mo
+\*.pot
+
+# Django stuff (if applies)
+
+\*.log
+local\_settings.py
+
+# SQL database files
+
+\*.sqlite3
+db.sqlite3
+\*.db
+
+# Environment variables
+
+.env
+.env.\*
+
+# Virtual environments
+
+venv/
+.venv/
+env/
+ENV/
+build-env/
+
+# Jupyter Notebook checkpoints
+
+.ipynb\_checkpoints/
+
+# IDEs and editors
+
+.vscode/
+.idea/
+\*.sublime-project
+\*.sublime-workspace
+
+# macOS
+
+.DS\_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+
+.\_\*
+
+# Windows
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Docker
+
+*.env.*.override.yml
+docker-compose.override.yml
+
+# Logs and runtime files
+
+\*.log
+logs/
+tmp/
+
+# ML artifacts (models, weights)
+
+ml/models/
+ml/*.h5
+ml/*.pt
+
+# Parsers outputs
+
+parsers/output/
+
+# Templates cache
+
+templates/**pycache**/
+
+# Azure Pipelines
+
+\*.azure-pipelines.yml
+
+# Misc
+
+\*.swp
+\*\~

@@ -1,36 +1,66 @@
+# azure-pipelines.yml
+
 trigger:
   branches:
     include:
-      - develop
       - main
+      - develop
+
+variables:
+  # Версия Python
+  pythonVersion: '3.10'
+  # Имя Docker-образа (без тега)
+  imageName: 'pricespy-fastapi'
+  # Service connection к Docker Registry (настроенный в Azure DevOps)
+  dockerRegistryServiceConnection: 'dockerhub-connection'  
 
 jobs:
+# 1) Сборка и тесты
 - job: BuildAndTest
+  displayName: 'Build & Test'
   pool:
-    vmImage: ubuntu-latest
+    vmImage: 'ubuntu-latest'
   steps:
-  - checkout: self
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.10'
-      addToPath: true
-  - script: |
-      pip install -r requirements.txt
-      pip install pytest
-      pytest tests/
-    displayName: 'Install dependencies and run tests'
+    - checkout: self
 
+    - task: UsePythonVersion@0
+      displayName: 'Use Python $(pythonVersion)'
+      inputs:
+        versionSpec: $(pythonVersion)
+        addToPath: true
+
+    - script: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: |
+        pytest --junitxml=$(Build.ArtifactStagingDirectory)/test-results.xml
+      displayName: 'Run pytest'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results'
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/test-results.xml'
+        failTaskOnFailedTests: true
+
+# 2) Сборка и пуш Docker-образа
 - job: BuildAndPushDockerImage
+  displayName: 'Build & Push Docker Image'
   dependsOn: BuildAndTest
   pool:
-    vmImage: ubuntu-latest
+    vmImage: 'ubuntu-latest'
   steps:
-  - checkout: self
-  - task: Docker@2
-    inputs:
-      containerRegistry: '$(dockerhub)'
-      repository: 'pricespy-fastapi'
-      command: 'buildAndPush'
-      Dockerfile: '**/Dockerfile'
-      tags: |
-        latest
+    - checkout: self
+
+    - task: Docker@2
+      displayName: 'Build and Push Image'
+      inputs:
+        command: buildAndPush
+        containerRegistry: $(dockerRegistryServiceConnection)
+        repository: $(imageName)
+        dockerfile: Dockerfile
+        tags: |
+          $(Build.BuildId)
+          latest

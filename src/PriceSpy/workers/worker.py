@@ -3,7 +3,7 @@
 import os
 import asyncio
 from redis.asyncio import Redis
-from crud import create_price_record_from_ozon
+from src.PriceSpy.crud import create_price_record_from_ozon
 
 async def worker():
     # 1) Получаем URL Redis из переменных окружения (docker-compose.yml)
